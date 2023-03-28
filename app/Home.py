@@ -1,12 +1,14 @@
 import streamlit as st
 
+from app import store
+from app.components.file_uploader import file_uploader
+
 
 st.markdown('# Sound analysis')
+file_uploader()
 
-wav_file = st.file_uploader(
-    'Import a .wav file to get started:',
-    type=['wav'],
-)
-if wav_file is not None:
-    # TODO: load the file and display charts
-    pass
+if store.get_wavfile() is not None:
+    wavfile = store.get_wavfile()
+
+    # audio player
+    st.audio(wavfile.samples, sample_rate=wavfile.sample_rate)
