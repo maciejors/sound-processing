@@ -107,7 +107,28 @@ class WavFile:
         Compute the silence rate of the audio signal.
         :return: array of silence rates of each channel
         """
-        return np.mean(np.abs(self.frames) < 0.01, axis=1)
+        return self.__get_silence_rate(self.zero_crossing_rate, self.volume)
+    
+    def __get_silence_rate(self, zcr, volume, zcr_threshold=0.1, volume_threshold=0.1):
+        """Calculates the silent rate of frames based on zero crossing rate and volume.
+
+        Args:
+            zcr (numpy.ndarray): Array of zero crossing rate values for each frame.
+            volume (numpy.ndarray): Array of volume values for each frame.
+            zcr_threshold (float, optional): Zero crossing rate threshold for silence detection. Defaults to 0.1.
+            volume_threshold (float, optional): Volume threshold for silence detection. Defaults to 0.1.
+
+        Returns:
+            numpy.ndarray: Array of silent rate values for each frame.
+        """
+        # Compute silent frames based on zero crossing rate and volume thresholds
+        silent_frames = np.logical_and(zcr <= zcr_threshold, volume <= volume_threshold)
+        
+        # Compute silent rate for each frame
+        silence_rate = np.mean(silent_frames, axis=-1)
+        
+        return silence_rate
+
     
 #     # Miara ta wyliczana jest z głośności i ZCR. Jeżeli głośność (Volume) i ZCR dla ramki są poniżej
 # # pewnego poziomu, ramka taka może zostać zaklasyfikowana jako cisza
