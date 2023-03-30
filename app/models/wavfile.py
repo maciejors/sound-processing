@@ -167,7 +167,7 @@ class WavFile:
         :return: array of variances of standard deviations of each channel
         """
         # TODO - implement this
-        return np.var(np.std(self.frames, axis=1), axis=0)
+        return np.std(self.frames, axis=1) / np.max(self.frames, axis=1)
     
     @property
     def volume_dynamic_range(self) -> np.ndarray:
@@ -187,10 +187,68 @@ class WavFile:
         return np.std(self.frames, axis=1)
     
     @property
-    def low_short_time_energy(self) -> np.ndarray:
+    def low_short_time_energy_ratio(self) -> np.ndarray:
         """
         Compute the low short time energy of the audio signal.
         :return: array of low short time energies of each channel
         """
         # TODO - implement this
         return np.array([0, 0])
+    
+    @property
+    def energy_entropy(self) -> np.ndarray:
+        """
+        Compute the energy entropy of the audio signal.
+        :return: array of energy entropies of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+    
+    @property
+    def zstd(self) -> np.ndarray:
+        """
+        Compute the variance of the standard deviation of the zero crossing rate of the audio signal.
+        :return: array of variances of standard deviations of zero crossing rates of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+    
+    @property
+    def hzcrr(self) -> np.ndarray:
+        """
+        Compute the high zero crossing rate ratio of the audio signal.
+        :return: array of high zero crossing rate ratios of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+    
+
+    def get_features(self) -> dict:
+        """
+        Get all features of the audio signal.
+        :return: dictionary of features
+        """
+        return {
+            'volume': self.volume,
+            'stereo_balance': self.stereo_balance,
+            'short_time_energy': self.short_time_energy,
+            'zero_crossing_rate': self.zero_crossing_rate,
+            'silence_rate': self.silence_rate,
+            'fundamental_frequency': self.fundamental_frequency,
+            'vstd': self.vstd,
+            'volume_dynamic_range': self.volume_dynamic_range,
+            'volume_undulation': self.volume_undulation,
+            'low_short_time_energy_ratio': self.low_short_time_energy_ratio,
+            'energy_entropy': self.energy_entropy,
+            'zstd': self.zstd,
+            'hzcrr': self.hzcrr
+        }
+    
+    def export_features(self, path: str):
+        """
+        Export all features of the audio signal to a CSV file.
+        :param path: path to the CSV file
+        """
+        features = self.get_features()
+        df = pd.DataFrame(features)
+        df.to_csv(path, index=False)
