@@ -1,6 +1,7 @@
 import numpy as np
 import streamlit as st
 import plotly.express as px
+import plotly.graph_objects as go
 
 from app import store
 from app.components.file_uploader import file_uploader
@@ -31,4 +32,8 @@ if store.get_wavfile() is not None:
         title=f'Signal plot',
         labels={'x': 'Time (in seconds)', 'y': 'Amplitude'},
     )
+    start_marker = go.Scatter(x=[timestamps_samples[0]], y=[wavfile.samples[0]], mode='markers', name='Start')
+    end_marker = go.Scatter(x=[timestamps_samples[-1]], y=[wavfile.samples[-1]], mode='markers', name='End')
+    plot.add_trace(start_marker)
+    plot.add_trace(end_marker)
     st.plotly_chart(plot, use_container_width=True)

@@ -108,7 +108,6 @@ class WavFile:
         Compute the zero crossing rate of the audio signal.
         :return: array of zero crossing rates of each channel
         """
-        # TODO czy nie trzeba jeszcze dzielić przez 2?
         return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1) / 2
 
     @cache
