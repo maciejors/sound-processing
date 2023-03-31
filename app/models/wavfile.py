@@ -20,7 +20,7 @@ class WavFile:
 
             # split channels into separate arrays:
             channels = [
-                samples_all_channels[i :: self.n_channels]
+                samples_all_channels[i:: self.n_channels]
                 for i in range(self.n_channels)
             ]
 
@@ -53,7 +53,7 @@ class WavFile:
         max_amplitude = np.max(self.samples)
         target_level_db = -3
         target_amplitude = 10 ** (target_level_db / 20) * (
-            2 ** (sample_width * 8 - 1) - 1
+                2 ** (sample_width * 8 - 1) - 1
         )
 
         gain = target_amplitude / max_amplitude
@@ -71,12 +71,16 @@ class WavFile:
         # frame size in samples
         frame_size = frame_length_ms * self.sample_rate // 1000
         frames = [
-            self.samples[i : i + frame_size]
+            self.samples[i: i + frame_size]
             for i in range(
                 0, self.n_samples - frame_size, frame_size - overlap
             )
         ]
-        return np.array(frames, dtype=object)
+        return np.array(frames, dtype=np.int32)
+
+    @cached_property
+    def n_frames(self) -> int:
+        return len(self.frames)
 
     @cached_property
     def volume(self) -> np.ndarray:
@@ -84,7 +88,7 @@ class WavFile:
         Compute the volume of the audio signal.
         :return: array of volumes of each channel
         """
-        return np.sqrt(np.mean(self.frames**2, axis=1))
+        return np.sqrt(np.mean(self.frames ** 2, axis=1))
 
     @cached_property
     def stereo_balance(self) -> np.ndarray:
@@ -100,7 +104,7 @@ class WavFile:
         Compute the short time energy of the audio signal.
         :return: array of short time energies of each channel
         """
-        return np.mean(self.frames**2, axis=1)
+        return np.mean(self.frames ** 2, axis=1)
 
     @cached_property
     def zero_crossing_rate(self) -> np.ndarray:
@@ -159,32 +163,32 @@ class WavFile:
         return np.array(freqs)
 
     @cached_property
-    def vstd(self) -> np.ndarray:
+    def vstd(self) -> float:
         """
         Compute the variance of the standard deviation of the audio signal.
         :return: array of variances of standard deviations of each channel
         """
-        return np.std(self.frames, axis=1) / np.max(self.frames, axis=1)
+        return np.std(self.samples) / np.max(self.samples)
 
     @cached_property
-    def volume_dynamic_range(self) -> np.ndarray:
+    def volume_dynamic_range(self) -> float:
         """
         Compute the volume dynamic range of the audio signal.
         :return: array of volume dynamic ranges of each channel
         """
-        return 1 - np.min(self.frames, axis=1) / np.max(self.frames)
+        return 1 - np.min(self.samples) / np.max(self.samples)
 
     @cached_property
-    def volume_undulation(self) -> np.ndarray:
+    def volume_undulation(self) -> float:
         """
         Compute the volume undulation of the audio signal.
         :return: array of volume undulations of each channel
         """
         # TODO - implement this
-        return np.std(self.frames, axis=1)
+        return np.std(self.frames)
 
     @cached_property
-    def low_short_time_energy_ratio(self) -> np.ndarray:
+    def low_short_time_energy_ratio(self) -> float:
         """
         Compute the low short time energy of the audio signal.
         :return: array of low short time energies of each channel
@@ -196,8 +200,8 @@ class WavFile:
         lster = np.mean(low_energy_frames + 1) / 2
         return lster
 
-    @cached_property
-    def energy_entropy(self, k: int = 10) -> np.ndarray:
+    @cache
+    def energy_entropy(self, k: int = 10) -> float:
         """
         Compute the energy entropy of the audio signal.
         :param k: number of segments to split each frame into
@@ -207,7 +211,9 @@ class WavFile:
         frames_split = np.array_split(self.frames, k, axis=1)
 
         # Compute energy of each segment and normalize by total energy in a frame
-        energies = np.array([np.sum(segment ** 2, axis=1) / np.sum(frame ** 2) for frame in frames_split for segment in frame])
+        energies = np.array(
+            [np.sum(segment ** 2) / np.sum(frame ** 2) for frame in frames_split for segment
+             in frame])
 
         # Compute probability density function of energy values
         pdf = energies / np.sum(energies)
@@ -217,29 +223,27 @@ class WavFile:
 
         return entropy
 
-
     @cached_property
-    def zstd(self) -> np.ndarray:
+    def zstd(self) -> float:
         """
         Compute the standard deviation of the zero crossing rate of the audio signal.
         :return: array of standard deviations of zero crossing rates of each channel
         """
-        return np.std(self.zero_crossing_rate, axis=1)
+        return self.zero_crossing_rate.std()
 
     @cached_property
-    def hzcrr(self) -> np.ndarray:
+    def hzcrr(self) -> float:
         """
         Compute the high zero crossing rate ratio of the audio signal.
         :return: array of high zero crossing rate ratios of each channel
         """
         return (
-            np.mean(
-                np.sign(
-                    self.zero_crossing_rate - 1.5 * np.mean(self.zero_crossing_rate) + 1
-                ),
-                axis=1,
-            )
-            / 2
+                np.mean(
+                    np.sign(
+                        self.zero_crossing_rate - 1.5 * np.mean(self.zero_crossing_rate) + 1
+                    ),
+                )
+                / 2
         )
 
     def get_features(self) -> dict:
@@ -258,7 +262,7 @@ class WavFile:
             "volume_dynamic_range": self.volume_dynamic_range,
             "volume_undulation": self.volume_undulation,
             "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
-            "energy_entropy": self.energy_entropy,
+            "energy_entropy": self.energy_entropy(),
             "zstd": self.zstd,
             "hzcrr": self.hzcrr,
         }
