@@ -164,12 +164,14 @@ class WavFile:
         for frame in self.frames:
             # Compute autocorrelation of the frame
             autocorr = np.correlate(frame, frame, mode='full')
-
-            # Keep only the positive lags
             autocorr = autocorr[len(frame)-1:]
+            zero_crossings = np.where(np.diff(np.sign(autocorr)))[0]
+            if not len(zero_crossings):
+                return 0
+            autocorr = autocorr[zero_crossings[0]:]
 
             # Find the first peak in the autocorrelation
-            peak = np.argmax(autocorr)
+            peak = np.argmax(autocorr) + zero_crossings[0]
 
             # Convert lag to time and frequency
             lag = peak / self.sample_rate
