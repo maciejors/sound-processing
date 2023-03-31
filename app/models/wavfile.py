@@ -160,7 +160,7 @@ class WavFile:
         Compute the volume dynamic range of the audio signal.
         :return: array of volume dynamic ranges of each channel
         """
-        return 1 - np.min(self.frames, axis=1) / np.max(self.frames, axis=1)
+        return 1 - np.min(self.frames, axis=1) / np.max(self.frames)
 
     @cached_property
     def volume_undulation(self) -> np.ndarray:
