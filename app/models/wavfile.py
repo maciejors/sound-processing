@@ -186,8 +186,16 @@ class WavFile:
         Compute the energy entropy of the audio signal.
         :return: array of energy entropies of each channel
         """
-
-        return
+        # Compute energy of each frame
+        energy = np.sum(frames ** 2, axis=1)
+        
+        # Compute probability density function of energy values
+        pdf = energy / np.sum(energy)
+        
+        # Compute energy entropy
+        entropy = -np.sum(pdf * np.log2(pdf))
+        
+        return entropy
 
     @cached_property
     def zstd(self) -> np.ndarray:
