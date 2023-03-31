@@ -180,9 +180,23 @@ class WavFile:
         Compute the volume undulation of the audio signal.
         :return: array of volume undulations of each channel
         """
-        # TODO - implement this
-        return np.std(self.frames, axis=1)
-
+        # Compute RMS amplitude of audio signal
+        rms_amplitude = np.sqrt(np.mean(np.square(self.frames), axis=1))
+        
+        # Compute time array in seconds
+        time = np.arange(0, len(audio_signal)) / sample_rate
+        
+        # Compute RMS amplitude over time
+        rms_amplitude_over_time = np.sqrt(np.mean(np.square(audio_signal), axis=1))
+        
+        # Compute differences between adjacent RMS amplitude values
+        differences = np.diff(rms_amplitude_over_time)
+        
+        # Compute mean of absolute differences
+        volume_undulation = np.mean(np.abs(differences))
+    
+        return volume_undulation
+    
     @cached_property
     def low_short_time_energy_ratio(self) -> np.ndarray:
         """
