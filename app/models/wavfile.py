@@ -305,7 +305,8 @@ class WavFile:
         df = pd.DataFrame(features)
         df.to_csv(path, index=False)
 
-    def detect_sound(self, threshold: float = 0.1):
+    @cached_property
+    def sound_presence(self, threshold: float = 0.1):
         """
         Detect sound in the audio signal.
         :param threshold: threshold for detecting sound
@@ -315,7 +316,8 @@ class WavFile:
         classified_frames[self.short_time_energy >= threshold] = 1
         return classified_frames
     
-    def detect_audio_type(self, threshold: float = 0.45):
+    @cached_property
+    def audio_type(self, threshold: float = 0.45):
         """
         Detect audio type in the audio signal.
         :param threshold: threshold for detecting sound
