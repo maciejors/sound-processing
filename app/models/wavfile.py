@@ -181,21 +181,26 @@ class WavFile:
         return lster
 
     @cached_property
-    def energy_entropy(self) -> np.ndarray:
+    def energy_entropy(self, k: int = 10) -> np.ndarray:
         """
         Compute the energy entropy of the audio signal.
+        :param k: number of segments to split each frame into
         :return: array of energy entropies of each channel
         """
-        # Compute energy of each frame
-        energy = np.sum(frames ** 2, axis=1)
-        
+        # Split each frame into k segments
+        frames_split = np.array_split(self.frames, k, axis=1)
+
+        # Compute energy of each segment and normalize by total energy in a frame
+        energies = np.array([np.sum(segment ** 2, axis=1) / np.sum(frame ** 2) for frame in frames_split for segment in frame])
+
         # Compute probability density function of energy values
-        pdf = energy / np.sum(energy)
-        
+        pdf = energies / np.sum(energies)
+
         # Compute energy entropy
         entropy = -np.sum(pdf * np.log2(pdf))
-        
+
         return entropy
+
 
     @cached_property
     def zstd(self) -> np.ndarray:
