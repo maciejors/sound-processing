@@ -11,9 +11,7 @@ class WavFile:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
             self.n_samples = wavfile_raw.getnframes()
-            self.n_samples_per_channel = wavfile_raw.getnframes() // self.n_channels
             self.sample_rate = wavfile_raw.getframerate()
-            self.sample_rate_per_channel = wavfile_raw.getframerate() // self.n_channels
 
             samples_raw = wavfile_raw.readframes(-1)
             samples_all_channels = np.frombuffer(samples_raw, dtype=np.int16)
@@ -36,7 +34,6 @@ class WavFile:
 
             # TODO - set appropriate frame size and overlap
             self.frames = self.__split_into_frames(20, 0)
-            [print(len(f)) for f in self.frames]
 
     @cached_property
     def audio_length_sec(self) -> float:
@@ -44,7 +41,7 @@ class WavFile:
         > The function returns the length of the audio in seconds
         :return: The length of the audio in seconds.
         """
-        return self.n_samples_per_channel / self.sample_rate_per_channel
+        return self.n_samples / self.sample_rate
 
     def __normalise_samples(self):
         """
@@ -72,11 +69,11 @@ class WavFile:
         :return: array of frames
         """
         # frame size in samples
-        frame_size = frame_length_ms * self.sample_rate_per_channel // 1000
+        frame_size = frame_length_ms * self.sample_rate // 1000
         frames = [
             self.samples[i : i + frame_size]
             for i in range(
-                0, self.n_samples_per_channel - frame_size, frame_size - overlap
+                0, self.n_samples - frame_size, frame_size - overlap
             )
         ]
         return np.array(frames, dtype=object)
