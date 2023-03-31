@@ -139,8 +139,24 @@ class WavFile:
         Compute the fundamental frequency of the audio signal.
         :return: array of fundamental frequencies of each channel
         """
-        # TODO - implement this
-        return np.array([0, 0])
+        freqs = []
+        for frame in self.frames:
+            # Compute autocorrelation of the frame
+            autocorr = np.correlate(frame, frame, mode='full')
+
+            # Keep only the positive lags
+            autocorr = autocorr[len(frame)-1:]
+
+            # Find the first peak in the autocorrelation
+            peak = np.argmax(autocorr)
+
+            # Convert lag to time and frequency
+            lag = peak / self.sample_rate
+            freq = 1 / lag
+            
+            freqs.append(freq)
+
+        return np.array(freqs)
 
     @cached_property
     def vstd(self) -> np.ndarray:
