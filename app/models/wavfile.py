@@ -6,17 +6,15 @@ import pandas as pd
 
 
 class WavFile:
-    __slots__ = ["samples", "frames", "n_channels", "n_samples", "n_samples_per_channel",
-                 "sample_rate", "sample_rate_per_channel"]
 
     def __init__(self, file, normalise: bool = True):
         with wave.open(file, mode="rb") as wavfile_raw:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
             self.n_samples = wavfile_raw.getnframes()
-            self.n_samples_per_channel = wavfile_raw.getnframes() / self.n_channels
+            self.n_samples_per_channel = wavfile_raw.getnframes() // self.n_channels
             self.sample_rate = wavfile_raw.getframerate()
-            self.sample_rate_per_channel = wavfile_raw.getframerate() / self.n_channels
+            self.sample_rate_per_channel = wavfile_raw.getframerate() // self.n_channels
 
             samples_raw = wavfile_raw.readframes(-1)
             samples_all_channels = np.frombuffer(samples_raw, dtype=np.int16)

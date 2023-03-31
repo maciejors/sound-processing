@@ -19,18 +19,18 @@ if store.get_wavfile() is not None:
     st.markdown('## Basic audio properties')
     st.markdown(f'- Audio length: {wavfile.audio_length_sec:.2f}s')
     st.markdown(f'- Number of channels: {wavfile.n_channels}')
-    st.markdown(f'- Total number of samples: {wavfile.n_samples_per_channel}')
-    st.markdown(f'- Number of samples per second: {wavfile.sample_rate_per_channel}')
+    st.markdown(f'- Total number of samples: {wavfile.n_samples}')
+    st.markdown(f'- Number of samples per channel: {wavfile.n_samples_per_channel}')
+    st.markdown(f'- Number of samples per second: {wavfile.sample_rate}')
+    st.markdown(f'- Number of samples in a channel per second: {wavfile.sample_rate_per_channel}')
 
     # plotting signals
     st.markdown('## Signals per channel')
-    # TODO: this part should later be moved into separate file
     timestamps_samples = np.linspace(0, wavfile.audio_length_sec, num=wavfile.n_samples_per_channel)
-    for channel_id, channel_samples in enumerate(wavfile.samples):
-        plot = px.line(
-            x=timestamps_samples,
-            y=channel_samples,
-            title=f'Channel {channel_id + 1}',
-            labels={'x': 'Time (in seconds)', 'y': 'Amplitude'},
-        )
-        st.plotly_chart(plot, use_container_width=True)
+    plot = px.line(
+        x=timestamps_samples,
+        y=wavfile.samples,
+        title=f'Signal plot',
+        labels={'x': 'Time (in seconds)', 'y': 'Amplitude'},
+    )
+    st.plotly_chart(plot, use_container_width=True)
