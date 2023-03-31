@@ -1,19 +1,22 @@
 import wave
+from functools import cache, cached_property
 
 import numpy as np
+import pandas as pd
 
 
 class WavFile:
-
-    __slots__ = ['samples', 'n_channels', 'n_samples', 'sample_rate', 'sample_width']
+    __slots__ = ["samples", "frames", "n_channels", "n_samples", "n_samples_per_channel",
+                 "sample_rate", "sample_rate_per_channel"]
 
     def __init__(self, file, normalise: bool = True):
-        with wave.open(file, mode='rb') as wavfile_raw:
+        with wave.open(file, mode="rb") as wavfile_raw:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
             self.n_samples = wavfile_raw.getnframes()
+            self.n_samples_per_channel = wavfile_raw.getnframes() / self.n_channels
             self.sample_rate = wavfile_raw.getframerate()
-            self.sample_width = wavfile_raw.getsampwidth()
+            self.sample_rate_per_channel = wavfile_raw.getframerate() / self.n_channels
 
             samples_raw = wavfile_raw.readframes(-1)
             samples_all_channels = np.frombuffer(samples_raw, dtype=np.int16)
@@ -21,25 +24,233 @@ class WavFile:
             samples_all_channels = np.array(samples_all_channels, dtype=np.int32)
 
             # split channels into separate arrays:
-            channels = [samples_all_channels[i::self.n_channels]
-                        for i in range(self.n_channels)]
+            channels = [
+                samples_all_channels[i::self.n_channels]
+                for i in range(self.n_channels)
+            ]
 
             # merge them as rows in the final samples array:
             self.samples = np.array(channels)
+            # convert to mono by averaging samples from each channel
+            self.samples = np.mean(self.samples, axis=0)
 
             if normalise:
                 self.__normalise_samples()
 
-    @property
+            # TODO - set appropriate frame size and overlap
+            self.frames = self.__split_into_frames(1024, 0)
+
+    @cached_property
     def audio_length_sec(self) -> float:
-        return self.n_samples / self.sample_rate
+        """
+        > The function returns the length of the audio in seconds
+        :return: The length of the audio in seconds.
+        """
+        return self.n_samples_per_channel / self.sample_rate_per_channel
 
     def __normalise_samples(self):
+        """
+        Normalize the samples to a target level in decibels.
+        """
+        # samples are averaged so the width at this point is 1
+        sample_width = 1
+
         max_amplitude = np.max(self.samples)
         target_level_db = -3
-        target_amplitude = 10 ** (target_level_db / 20) * (2 ** (self.sample_width * 8 - 1) - 1)
+        target_amplitude = 10 ** (target_level_db / 20) * (
+                2 ** (sample_width * 8 - 1) - 1
+        )
 
         gain = target_amplitude / max_amplitude
         samples_normalised = np.floor(self.samples * gain)
 
         self.samples = samples_normalised
+
+    def __split_into_frames(self, frame_size: int, overlap: int) -> np.ndarray:
+        """
+        Split the samples array into frames of given size with given overlap.
+        :param frame_size: size of the frame in samples
+        :param overlap: overlap between frames in samples
+        :return: array of frames
+        """
+        frames = []
+        for i in range(0, self.n_samples_per_channel - frame_size, frame_size - overlap):
+            frames.append(self.samples[i: i + frame_size])
+
+        return np.array(frames, dtype=object)
+
+    @cached_property
+    def volume(self) -> np.ndarray:
+        """
+        Compute the volume of the audio signal.
+        :return: array of volumes of each channel
+        """
+        return np.sqrt(np.mean(self.frames ** 2, axis=1))
+
+    @cached_property
+    def stereo_balance(self) -> np.ndarray:
+        """
+        Compute the stereo balance of the audio signal.
+        :return: array of stereo balances of each channel
+        """
+        return self.frames[0] / self.frames[1]
+
+    @cached_property
+    def short_time_energy(self) -> np.ndarray:
+        """
+        Compute the short time energy of the audio signal.
+        :return: array of short time energies of each channel
+        """
+        return np.mean(self.frames ** 2, axis=1)
+
+    @cached_property
+    def zero_crossing_rate(self) -> np.ndarray:
+        """
+        Compute the zero crossing rate of the audio signal.
+        :return: array of zero crossing rates of each channel
+        """
+        return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1)
+
+    @cache
+    def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
+        """Calculates the silent rate of frames based on zero crossing rate and volume.
+
+        Args:
+            zcr (numpy.ndarray): Array of zero crossing rate values for each frame.
+            volume (numpy.ndarray): Array of volume values for each frame.
+            zcr_threshold (float, optional): Zero crossing rate threshold for silence detection. Defaults to 0.1.
+            volume_threshold (float, optional): Volume threshold for silence detection. Defaults to 0.1.
+
+        Returns:
+            numpy.ndarray: Array of silent rate values for each frame.
+        """
+        # Compute silent frames based on zero crossing rate and volume thresholds
+        silent_frames = np.logical_and(self.zero_crossing_rate <= zcr_threshold,
+                                       self.volume <= volume_threshold)
+
+        # Compute silent rate for each frame
+        silence_rate = np.mean(silent_frames, axis=-1)
+
+        return silence_rate
+
+    #     # Miara ta wyliczana jest z głośności i ZCR. Jeżeli głośność (Volume) i ZCR dla ramki są poniżej
+    # # pewnego poziomu, ramka taka może zostać zaklasyfikowana jako cisza
+
+    # def get_silent_rate(zcr_frame: float, vol_frame: float, frame_length: int, threshold=0.0001):
+    #     """Computes the silent rate of audio frames.
+
+    #     Args:
+    #         frame (numpy.ndarray): Input audio frames.
+    #         threshold (float): The threshold below which a frame is considered silent.
+    #             Defaults to 0.0001.
+
+    #     Returns:
+    #         float: The silent rate of the input frames.
+    #     """
+    #     num_silent_frames = 0
+    #     for sample in frame:
+    #         if zcr_frame < threshold and vol_frame < threshold: #osobne thresholdy
+    #             num_silent_frames += 1
+    #     silent_rate = num_silent_frames / frame_length
+    #     return silent_rate
+
+    @cached_property
+    def fundamental_frequency(self) -> np.ndarray:
+        """
+        Compute the fundamental frequency of the audio signal.
+        :return: array of fundamental frequencies of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+
+    @cached_property
+    def vstd(self) -> np.ndarray:
+        """
+        Compute the variance of the standard deviation of the audio signal.
+        :return: array of variances of standard deviations of each channel
+        """
+        # TODO - implement this
+        return np.std(self.frames, axis=1) / np.max(self.frames, axis=1)
+
+    @cached_property
+    def volume_dynamic_range(self) -> np.ndarray:
+        """
+        Compute the volume dynamic range of the audio signal.
+        :return: array of volume dynamic ranges of each channel
+        """
+        return 1 - np.min(self.frames, axis=1) / np.max(self.frames, axis=1)
+
+    @cached_property
+    def volume_undulation(self) -> np.ndarray:
+        """
+        Compute the volume undulation of the audio signal.
+        :return: array of volume undulations of each channel
+        """
+        # TODO - implement this
+        return np.std(self.frames, axis=1)
+
+    @cached_property
+    def low_short_time_energy_ratio(self) -> np.ndarray:
+        """
+        Compute the low short time energy of the audio signal.
+        :return: array of low short time energies of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+
+    @cached_property
+    def energy_entropy(self) -> np.ndarray:
+        """
+        Compute the energy entropy of the audio signal.
+        :return: array of energy entropies of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+
+    @cached_property
+    def zstd(self) -> np.ndarray:
+        """
+        Compute the variance of the standard deviation of the zero crossing rate of the audio signal.
+        :return: array of variances of standard deviations of zero crossing rates of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+
+    @cached_property
+    def hzcrr(self) -> np.ndarray:
+        """
+        Compute the high zero crossing rate ratio of the audio signal.
+        :return: array of high zero crossing rate ratios of each channel
+        """
+        # TODO - implement this
+        return np.array([0, 0])
+
+    def get_features(self) -> dict:
+        """
+        Get all features of the audio signal.
+        :return: dictionary of features
+        """
+        return {
+            "volume": self.volume,
+            "stereo_balance": self.stereo_balance,
+            "short_time_energy": self.short_time_energy,
+            "zero_crossing_rate": self.zero_crossing_rate,
+            "silence_rate": self.get_silence_rate(),
+            "fundamental_frequency": self.fundamental_frequency,
+            "vstd": self.vstd,
+            "volume_dynamic_range": self.volume_dynamic_range,
+            "volume_undulation": self.volume_undulation,
+            "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
+            "energy_entropy": self.energy_entropy,
+            "zstd": self.zstd,
+            "hzcrr": self.hzcrr,
+        }
+
+    def export_features(self, path: str):
+        """
+        Export all features of the audio signal to a CSV file.
+        :param path: path to the CSV file
+        """
+        features = self.get_features()
+        df = pd.DataFrame(features)
+        df.to_csv(path, index=False)
