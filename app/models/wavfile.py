@@ -73,9 +73,12 @@ class WavFile:
         """
         # frame size in samples
         frame_size = frame_length_ms * self.sample_rate_per_channel // 1000
-        frames = [self.samples[i: i + frame_size]
-                  for i in range(0, self.n_samples_per_channel - frame_size,
-                                 frame_size - overlap)]
+        frames = [
+            self.samples[i : i + frame_size]
+            for i in range(
+                0, self.n_samples_per_channel - frame_size, frame_size - overlap
+            )
+        ]
         return np.array(frames, dtype=object)
 
     @cached_property
@@ -109,7 +112,7 @@ class WavFile:
         :return: array of zero crossing rates of each channel
         """
         # TODO czy nie trzeba jeszcze dzielić przez 2?
-        return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1)
+        return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1) / 2
 
     @cache
     def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
@@ -187,17 +190,16 @@ class WavFile:
         Compute the energy entropy of the audio signal.
         :return: array of energy entropies of each channel
         """
-        # TODO - implement this
-        return np.array([0, 0])
+
+        return
 
     @cached_property
     def zstd(self) -> np.ndarray:
         """
-        Compute the variance of the standard deviation of the zero crossing rate of the audio signal.
-        :return: array of variances of standard deviations of zero crossing rates of each channel
+        Compute the standard deviation of the zero crossing rate of the audio signal.
+        :return: array of standard deviations of zero crossing rates of each channel
         """
-        # TODO - implement this
-        return np.array([0, 0])
+        return np.std(self.zero_crossing_rate, axis=1)
 
     @cached_property
     def hzcrr(self) -> np.ndarray:
@@ -205,8 +207,15 @@ class WavFile:
         Compute the high zero crossing rate ratio of the audio signal.
         :return: array of high zero crossing rate ratios of each channel
         """
-        # TODO - implement this
-        return np.array([0, 0])
+        return (
+            np.mean(
+                np.sign(
+                    self.zero_crossing_rate - 1.5 * np.mean(self.zero_crossing_rate) + 1
+                ),
+                axis=1,
+            )
+            / 2
+        )
 
     def get_features(self) -> dict:
         """
