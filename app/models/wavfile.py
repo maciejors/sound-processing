@@ -115,6 +115,26 @@ class WavFile:
         return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1) / 2
 
     @cache
+    def get_silent_frames(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
+        """Calculates the silent frames based on zero crossing rate and volume.
+
+        Args:
+            zcr (numpy.ndarray): Array of zero crossing rate values for each frame.
+            volume (numpy.ndarray): Array of volume values for each frame.
+            zcr_threshold (float, optional): Zero crossing rate threshold for silence detection. Defaults to 0.1.
+            volume_threshold (float, optional): Volume threshold for silence detection. Defaults to 0.1.
+
+        Returns:
+            numpy.ndarray: Array of silent frames.
+        """
+        # Compute silent frames based on zero crossing rate and volume thresholds
+        silent_frames = np.logical_and(
+            self.zero_crossing_rate <= zcr_threshold, self.volume <= volume_threshold
+        )
+
+        return silent_frames
+
+    @cache
     def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the silent rate of frames based on zero crossing rate and volume.
 
@@ -127,10 +147,7 @@ class WavFile:
         Returns:
             numpy.ndarray: Array of silent rate values for each frame.
         """
-        # Compute silent frames based on zero crossing rate and volume thresholds
-        silent_frames = np.logical_and(
-            self.zero_crossing_rate <= zcr_threshold, self.volume <= volume_threshold
-        )
+        silent_frames = self.get_silent_frames(zcr_threshold, volume_threshold)
 
         # Compute silent rate for each frame
         silence_rate = np.mean(silent_frames, axis=-1)
