@@ -167,7 +167,8 @@ class WavFile:
             autocorr = autocorr[len(frame)-1:]
             zero_crossings = np.where(np.diff(np.sign(autocorr)))[0]
             if not len(zero_crossings):
-                return 0
+                freqs.append(0)
+                continue
             autocorr = autocorr[zero_crossings[0]:]
 
             # Find the first peak in the autocorrelation
