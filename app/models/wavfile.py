@@ -36,7 +36,8 @@ class WavFile:
                 self.__normalise_samples()
 
             # TODO - set appropriate frame size and overlap
-            self.frames = self.__split_into_frames(1024, 0)
+            self.frames = self.__split_into_frames(20, 0)
+            [print(len(f)) for f in self.frames]
 
     @cached_property
     def audio_length_sec(self) -> float:
@@ -64,17 +65,18 @@ class WavFile:
 
         self.samples = samples_normalised
 
-    def __split_into_frames(self, frame_size: int, overlap: int) -> np.ndarray:
+    def __split_into_frames(self, frame_length_ms: int, overlap: int) -> np.ndarray:
         """
         Split the samples array into frames of given size with given overlap.
-        :param frame_size: size of the frame in samples
+        :param frame_length_ms: length of the frame in ms
         :param overlap: overlap between frames in samples
         :return: array of frames
         """
-        frames = []
-        for i in range(0, self.n_samples_per_channel - frame_size, frame_size - overlap):
-            frames.append(self.samples[i: i + frame_size])
-
+        # frame size in samples
+        frame_size = frame_length_ms * self.sample_rate_per_channel // 1000
+        frames = [self.samples[i: i + frame_size]
+                  for i in range(0, self.n_samples_per_channel - frame_size,
+                                 frame_size - overlap)]
         return np.array(frames, dtype=object)
 
     @cached_property
