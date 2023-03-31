@@ -180,26 +180,41 @@ class WavFile:
 
     @cached_property
     def volume_undulation(self) -> float:
-        """
-        Compute the volume undulation of the audio signal.
-        :return: array of volume undulations of each channel
-        """
-        # Compute RMS amplitude of audio signal
-        rms_amplitude = np.sqrt(np.mean(np.square(self.frames), axis=1))
+        # """
+        # Compute the volume undulation of the audio signal.
+        # :return: array of volume undulations of each channel
+        # """
+        # # Compute RMS amplitude of audio signal
+        # rms_amplitude = np.sqrt(np.mean(np.square(self.frames), axis=1))
         
-        # Compute time array in seconds
-        time = np.arange(0, len(audio_signal)) / sample_rate
+        # # Compute time array in seconds
+        # time = np.arange(0, len(audio_signal)) / sample_rate
         
-        # Compute RMS amplitude over time
-        rms_amplitude_over_time = np.sqrt(np.mean(np.square(audio_signal), axis=1))
+        # # Compute RMS amplitude over time
+        # rms_amplitude_over_time = np.sqrt(np.mean(np.square(audio_signal), axis=1))
         
-        # Compute differences between adjacent RMS amplitude values
-        differences = np.diff(rms_amplitude_over_time)
+        # # Compute differences between adjacent RMS amplitude values
+        # differences = np.diff(rms_amplitude_over_time)
         
-        # Compute mean of absolute differences
-        volume_undulation = np.mean(np.abs(differences))
+        # # Compute mean of absolute differences
+        # volume_undulation = np.mean(np.abs(differences))
     
-        return volume_undulation
+        # return volume_undulation
+        # Initialize the VU value to zero.
+        VU = 0.0
+
+        # Compute the differences between neighboring peaks and valleys.
+        peaks = np.logical_and(self.volume[1:-1] > self.volume[:-2], self.volume[1:-1] > self.volume[2:])
+        valleys = np.logical_and(self.volume[1:-1] < self.volume[:-2], self.volume[1:-1] < self.volume[2:])
+        peak_diffs = self.volume[1:-1] - np.minimum(self.volume[:-2], self.volume[2:])
+        valley_diffs = np.maximum(self.volume[:-2], self.volume[2:]) - self.volume[1:-1]
+
+        # Compute the VU value by summing the differences between neighboring peaks and valleys.
+        VU = np.sum(np.where(peaks, peak_diffs, 0) + np.where(valleys, valley_diffs, 0))
+
+        # Return the final VU value.
+        return VU
+
     
     @cached_property
     def low_short_time_energy_ratio(self) -> float:
