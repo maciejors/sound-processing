@@ -1,20 +1,22 @@
 import wave
+from functools import cache, cached_property
 
 import numpy as np
 import pandas as pd
 
 
 class WavFile:
-
-    __slots__ = ["samples", "n_channels", "n_samples", "sample_rate", "sample_width"]
+    __slots__ = ["samples", "frames", "n_channels", "n_samples", "n_samples_per_channel",
+                 "sample_rate", "sample_rate_per_channel"]
 
     def __init__(self, file, normalise: bool = True):
         with wave.open(file, mode="rb") as wavfile_raw:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
             self.n_samples = wavfile_raw.getnframes()
+            self.n_samples_per_channel = wavfile_raw.getnframes() / self.n_channels
             self.sample_rate = wavfile_raw.getframerate()
-            self.sample_width = wavfile_raw.getsampwidth()
+            self.sample_rate_per_channel = wavfile_raw.getframerate() / self.n_channels
 
             samples_raw = wavfile_raw.readframes(-1)
             samples_all_channels = np.frombuffer(samples_raw, dtype=np.int16)
@@ -23,12 +25,14 @@ class WavFile:
 
             # split channels into separate arrays:
             channels = [
-                samples_all_channels[i :: self.n_channels]
+                samples_all_channels[i::self.n_channels]
                 for i in range(self.n_channels)
             ]
 
             # merge them as rows in the final samples array:
             self.samples = np.array(channels)
+            # convert to mono by averaging samples from each channel
+            self.samples = np.mean(self.samples, axis=0)
 
             if normalise:
                 self.__normalise_samples()
@@ -36,22 +40,25 @@ class WavFile:
             # TODO - set appropriate frame size and overlap
             self.frames = self.__split_into_frames(1024, 0)
 
-    @property
+    @cached_property
     def audio_length_sec(self) -> float:
         """
         > The function returns the length of the audio in seconds
         :return: The length of the audio in seconds.
         """
-        return self.n_samples / self.sample_rate
+        return self.n_samples_per_channel / self.sample_rate_per_channel
 
     def __normalise_samples(self):
         """
         Normalize the samples to a target level in decibels.
         """
+        # samples are averaged so the width at this point is 1
+        sample_width = 1
+
         max_amplitude = np.max(self.samples)
         target_level_db = -3
         target_amplitude = 10 ** (target_level_db / 20) * (
-            2 ** (self.sample_width * 8 - 1) - 1
+                2 ** (sample_width * 8 - 1) - 1
         )
 
         gain = target_amplitude / max_amplitude
@@ -67,20 +74,20 @@ class WavFile:
         :return: array of frames
         """
         frames = []
-        for i in range(0, self.n_samples - frame_size, frame_size - overlap):
-            frames.append(self.samples[i : i + frame_size])
+        for i in range(0, self.n_samples_per_channel - frame_size, frame_size - overlap):
+            frames.append(self.samples[i: i + frame_size])
 
         return np.array(frames, dtype=object)
 
-    @property
+    @cached_property
     def volume(self) -> np.ndarray:
         """
         Compute the volume of the audio signal.
         :return: array of volumes of each channel
         """
-        return np.sqrt(np.mean(self.frames**2, axis=1))
+        return np.sqrt(np.mean(self.frames ** 2, axis=1))
 
-    @property
+    @cached_property
     def stereo_balance(self) -> np.ndarray:
         """
         Compute the stereo balance of the audio signal.
@@ -88,15 +95,15 @@ class WavFile:
         """
         return self.frames[0] / self.frames[1]
 
-    @property
+    @cached_property
     def short_time_energy(self) -> np.ndarray:
         """
         Compute the short time energy of the audio signal.
         :return: array of short time energies of each channel
         """
-        return np.mean(self.frames**2, axis=1)
+        return np.mean(self.frames ** 2, axis=1)
 
-    @property
+    @cached_property
     def zero_crossing_rate(self) -> np.ndarray:
         """
         Compute the zero crossing rate of the audio signal.
@@ -104,16 +111,8 @@ class WavFile:
         """
         return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1)
 
-    # TODO - implement this
-    @property
-    def silence_rate(self) -> np.ndarray:
-        """
-        Compute the silence rate of the audio signal.
-        :return: array of silence rates of each channel
-        """
-        return self.__get_silence_rate(self.zero_crossing_rate, self.volume)
-
-    def __get_silence_rate(self, zcr, volume, zcr_threshold=0.1, volume_threshold=0.1):
+    @cache
+    def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the silent rate of frames based on zero crossing rate and volume.
 
         Args:
@@ -126,7 +125,8 @@ class WavFile:
             numpy.ndarray: Array of silent rate values for each frame.
         """
         # Compute silent frames based on zero crossing rate and volume thresholds
-        silent_frames = np.logical_and(zcr <= zcr_threshold, volume <= volume_threshold)
+        silent_frames = np.logical_and(self.zero_crossing_rate <= zcr_threshold,
+                                       self.volume <= volume_threshold)
 
         # Compute silent rate for each frame
         silence_rate = np.mean(silent_frames, axis=-1)
@@ -154,7 +154,7 @@ class WavFile:
     #     silent_rate = num_silent_frames / frame_length
     #     return silent_rate
 
-    @property
+    @cached_property
     def fundamental_frequency(self) -> np.ndarray:
         """
         Compute the fundamental frequency of the audio signal.
@@ -163,7 +163,7 @@ class WavFile:
         # TODO - implement this
         return np.array([0, 0])
 
-    @property
+    @cached_property
     def vstd(self) -> np.ndarray:
         """
         Compute the variance of the standard deviation of the audio signal.
@@ -172,7 +172,7 @@ class WavFile:
         # TODO - implement this
         return np.std(self.frames, axis=1) / np.max(self.frames, axis=1)
 
-    @property
+    @cached_property
     def volume_dynamic_range(self) -> np.ndarray:
         """
         Compute the volume dynamic range of the audio signal.
@@ -180,7 +180,7 @@ class WavFile:
         """
         return 1 - np.min(self.frames, axis=1) / np.max(self.frames, axis=1)
 
-    @property
+    @cached_property
     def volume_undulation(self) -> np.ndarray:
         """
         Compute the volume undulation of the audio signal.
@@ -189,7 +189,7 @@ class WavFile:
         # TODO - implement this
         return np.std(self.frames, axis=1)
 
-    @property
+    @cached_property
     def low_short_time_energy_ratio(self) -> np.ndarray:
         """
         Compute the low short time energy of the audio signal.
@@ -198,7 +198,7 @@ class WavFile:
         # TODO - implement this
         return np.array([0, 0])
 
-    @property
+    @cached_property
     def energy_entropy(self) -> np.ndarray:
         """
         Compute the energy entropy of the audio signal.
@@ -207,7 +207,7 @@ class WavFile:
         # TODO - implement this
         return np.array([0, 0])
 
-    @property
+    @cached_property
     def zstd(self) -> np.ndarray:
         """
         Compute the variance of the standard deviation of the zero crossing rate of the audio signal.
@@ -216,7 +216,7 @@ class WavFile:
         # TODO - implement this
         return np.array([0, 0])
 
-    @property
+    @cached_property
     def hzcrr(self) -> np.ndarray:
         """
         Compute the high zero crossing rate ratio of the audio signal.
@@ -235,7 +235,7 @@ class WavFile:
             "stereo_balance": self.stereo_balance,
             "short_time_energy": self.short_time_energy,
             "zero_crossing_rate": self.zero_crossing_rate,
-            "silence_rate": self.silence_rate,
+            "silence_rate": self.get_silence_rate(),
             "fundamental_frequency": self.fundamental_frequency,
             "vstd": self.vstd,
             "volume_dynamic_range": self.volume_dynamic_range,
