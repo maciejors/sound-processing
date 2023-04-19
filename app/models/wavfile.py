@@ -6,11 +6,21 @@ import pandas as pd
 
 
 class WavFile:
-    def __init__(self, file, normalise: bool = True):
+    def __init__(self, file, normalise: bool = True,
+                 frame_length_ms: int = 20, frame_overlap: int = 0):
+        """
+        :param file: a wavfile (path or bytes)
+        :param normalise: whether or not to normalise the audio
+        :param frame_length_ms: length of the frame in ms
+        :param frame_overlap: overlap between frames in samples
+        """
+        self.frame_length_ms = frame_length_ms
+        self.frame_overlap = frame_overlap
+
         with wave.open(file, mode="rb") as wavfile_raw:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
-            self.n_samples = wavfile_raw.getnframes()
+            self.n_samples_all = wavfile_raw.getnframes()
             self.sample_rate = wavfile_raw.getframerate()
 
             samples_raw = wavfile_raw.readframes(-1)
@@ -25,20 +35,44 @@ class WavFile:
             ]
 
             # merge them as rows in the final samples array:
-            self.samples = np.array(channels)
+            self.samples_all = np.array(channels)
             # convert to mono by averaging samples from each channel
-            self.samples = np.mean(self.samples, axis=0)
+            self.samples_all = np.mean(self.samples_all, axis=0)
+
+            # set the default boundaries of audio to analyse
+            self.__start_id = 0
+            self.__end_id = len(self.samples_all) - 1
 
             if normalise:
                 self.__normalise_samples()
 
             # TODO - set appropriate frame size and overlap
-            self.frames = self.__split_into_frames(20, 0)
+            self.frames = self.__split_into_frames()
 
-    @cached_property
+    @property
+    def boundaries(self) -> tuple[int, int]:
+        return self.__start_id, self.__end_id
+
+    @property
+    def samples(self) -> np.ndarray:
+        return self.samples_all[self.__start_id:self.__end_id]
+
+    @property
+    def n_samples(self) -> int:
+        return self.__end_id - self.__start_id
+
+    @property
+    def all_audio_length_sec(self) -> float:
+        """
+        > The function returns the length of the audio in seconds (it ignores boundaries)
+        :return: The length of the audio in seconds.
+        """
+        return self.n_samples_all / self.sample_rate
+
+    @property
     def audio_length_sec(self) -> float:
         """
-        > The function returns the length of the audio in seconds
+        > The function returns the length of the audio in seconds (it considers boundaries)
         :return: The length of the audio in seconds.
         """
         return self.n_samples / self.sample_rate
@@ -50,33 +84,39 @@ class WavFile:
         # samples are averaged so the width at this point is 1
         sample_width = 1
 
-        max_amplitude = np.max(self.samples)
+        max_amplitude = np.max(self.samples_all)
         target_level_db = -3
         target_amplitude = 10 ** (target_level_db / 20) * (
                 2 ** (sample_width * 8 - 1) - 1
         )
 
         gain = target_amplitude / max_amplitude
-        samples_normalised = np.floor(self.samples * gain)
+        samples_normalised = np.floor(self.samples_all * gain)
 
-        self.samples = samples_normalised
+        self.samples_all = samples_normalised
 
-    def __split_into_frames(self, frame_length_ms: int, overlap: int) -> np.ndarray:
+    def __split_into_frames(self) -> np.ndarray:
         """
         Split the samples array into frames of given size with given overlap.
-        :param frame_length_ms: length of the frame in ms
-        :param overlap: overlap between frames in samples
         :return: array of frames
         """
         # frame size in samples
-        frame_size = frame_length_ms * self.sample_rate // 1000
+        frame_size = self.frame_length_ms * self.sample_rate // 1000
         frames = [
             self.samples[i: i + frame_size]
             for i in range(
-                0, self.n_samples - frame_size, frame_size - overlap
+                0, self.n_samples - frame_size, frame_size - self.frame_overlap
             )
         ]
         return np.array(frames, dtype=np.int32)
+
+    def set_boundaries(self, start_sample_id: int, end_sample_id: int):
+        """
+        Sets the starting and the ending point of audio to analyse.
+        """
+        self.__start_id = start_sample_id
+        self.__end_id = end_sample_id
+        self.__split_into_frames()
 
     @cached_property
     def n_frames(self) -> int:
