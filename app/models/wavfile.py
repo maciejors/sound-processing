@@ -301,29 +301,33 @@ class WavFile:
         :return: dictionary of features
         """
         return {
-            "volume": self.volume,
-            "stereo_balance": self.stereo_balance,
-            "short_time_energy": self.short_time_energy,
-            "zero_crossing_rate": self.zero_crossing_rate,
-            "silence_rate": self.get_silence_rate(),
-            "fundamental_frequency": self.fundamental_frequency,
-            "vstd": self.vstd,
-            "volume_dynamic_range": self.volume_dynamic_range,
-            "volume_undulation": self.volume_undulation,
-            "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
-            "energy_entropy": self.energy_entropy(),
-            "zstd": self.zstd,
-            "hzcrr": self.hzcrr,
+            "frame-level": {
+                "volume": list(self.volume),
+                # "stereo_balance": list(self.stereo_balance),
+                "short_time_energy": list(self.short_time_energy),
+                "zero_crossing_rate": list(self.zero_crossing_rate),
+                "silence_rate": self.get_silence_rate(),
+                "fundamental_frequency": list(self.fundamental_frequency),
+            },
+            "clip-level": {
+                "vstd": self.vstd,
+                "volume_dynamic_range": self.volume_dynamic_range,
+                "volume_undulation": self.volume_undulation,
+                "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
+                "energy_entropy": self.energy_entropy(),
+                "zstd": self.zstd,
+                "hzcrr": self.hzcrr,
+            },
         }
 
-    def export_features(self, path: str):
+    def export_features(self, path: str = None):
         """
         Export all features of the audio signal to a CSV file.
         :param path: path to the CSV file
         """
         features = self.get_features()
         df = pd.DataFrame(features)
-        df.to_csv(path, index=False)
+        return df.to_csv(index=False)
 
     @cached_property
     def sound_presence(self, threshold: float = 0.1):

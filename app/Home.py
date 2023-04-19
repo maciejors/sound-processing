@@ -2,6 +2,7 @@ import numpy as np
 import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
+import json
 
 from app import store
 from app.components.file_uploader import file_uploader
@@ -23,6 +24,18 @@ if store.get_wavfile() is not None:
     st.markdown(f'- Total number of samples: {wavfile.n_samples}')
     st.markdown(f'- Number of samples per second: {wavfile.sample_rate}')
 
+    # csv
+    st.markdown('## Generate JSON File')
+    if st.button('Generate JSON'):
+        features = wavfile.get_features()
+        json_str = json.dumps(features)
+        st.download_button(
+            label='Download JSON',
+            data=json_str,
+            file_name='data.json',
+            mime='text/json'
+        )
+
     # plotting signals
     st.markdown('## Averaged signal')
     timestamps_samples = np.linspace(0, wavfile.audio_length_sec, num=wavfile.n_samples)
@@ -32,8 +45,16 @@ if store.get_wavfile() is not None:
         title=f'Signal plot',
         labels={'x': 'Time (in seconds)', 'y': 'Amplitude'},
     )
-    start_marker = go.Scatter(x=[timestamps_samples[0]], y=[wavfile.samples[0]], mode='markers', name='Start')
-    end_marker = go.Scatter(x=[timestamps_samples[-1]], y=[wavfile.samples[-1]], mode='markers', name='End')
-    plot.add_trace(start_marker)
-    plot.add_trace(end_marker)
+    plot.add_shape(
+        type='line',
+        x0=timestamps_samples[0], y0=np.min(wavfile.samples),
+        x1=timestamps_samples[0], y1=np.max(wavfile.samples),
+        line=dict(color='red', width=2)
+    )
+    plot.add_shape(
+        type='line',
+        x0=timestamps_samples[-1], y0=np.min(wavfile.samples),
+        x1=timestamps_samples[-1], y1=np.max(wavfile.samples),
+        line=dict(color='red', width=2)
+    )
     st.plotly_chart(plot, use_container_width=True)
