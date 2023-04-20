@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 
 from app import store
 
@@ -48,6 +49,35 @@ if store.get_wavfile() is not None:
     with vol_col:
         volume_threshold = st.number_input(label='Volume threshold')
     st.markdown(f'#### Silent ratio: {wav.get_silence_rate(zcr_threshold, volume_threshold):.2f}')
+    classes = wav.get_frame_types(zcr_threshold, volume_threshold)
+    classes = np.repeat(classes, wav.n_samples_per_frame)
+    class_to_color = {0: 'red', 1: 'yellow', 2: 'green'}
+    timestamps_samples = np.linspace(0, wav.all_audio_length_sec, num=wav.n_samples_all)
+    # create a list of trace objects, one for each class
+    traces = []
+    for cls, color in class_to_color.items():
+        # filter the x and y values for this class
+        x_cls = timestamps_samples[classes == cls]
+        y_cls = wav.samples_all[classes == cls]
+        
+        # create a scatter trace with the filtered x and y values
+        trace = go.Scatter(
+            x=x_cls,
+            y=y_cls,
+            mode='markers',
+            marker=dict(color=color),
+            name= "Silence" if cls == 0 else "Non-voiced" if cls == 1 else "Voiced"
+        )
+        
+        # add the trace to the list
+        traces.append(trace)
+
+    # create a layout object and a figure object
+    layout = go.Layout(title='Scatter Plot with Colored Classes')
+    fig = go.Figure(data=traces, layout=layout)
+
+    # show the figure
+    fig.show()
 
     # F0
     st.markdown('---')

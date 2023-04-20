@@ -170,9 +170,31 @@ class WavFile:
         # Compute silent frames based on zero crossing rate and volume thresholds
         silent_frames = np.logical_and(
             self.zero_crossing_rate <= zcr_threshold, self.volume <= volume_threshold
-        )
-
+        ).astype(int)
         return silent_frames
+    
+    @cache
+    def get_frame_types(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
+        """Calculates the frame types based on zero crossing rate and volume.
+            1 - silent
+            2 - voiceless
+            3 - voiced
+
+        Args:
+            zcr (numpy.ndarray): Array of zero crossing rate values for each frame.
+            volume (numpy.ndarray): Array of volume values for each frame.
+            zcr_threshold (float, optional): Zero crossing rate threshold for silence detection. Defaults to 0.1.
+            volume_threshold (float, optional): Volume threshold for silence detection. Defaults to 0.1.
+
+        Returns:
+            numpy.ndarray: Array of frame types.
+        """
+        # Compute frame types based on zero crossing rate and volume thresholds
+        frame_types = np.where(
+            self.zero_crossing_rate <= zcr_threshold, np.where(self.volume <= volume_threshold, 0, 2), 1
+        )
+        # TODO - possible situation when frame has high zcr and low volume
+        return frame_types
 
     @cache
     def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
