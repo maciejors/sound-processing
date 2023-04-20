@@ -11,6 +11,10 @@ if store.get_wavfile() is not None:
     timestamps_frames = np.linspace(0, wav.audio_length_sec, num=wav.n_frames)
 
     st.markdown('---')
+    st.markdown('## Audio type')
+    st.markdown(f'{wav.get_audio_type()}')
+
+    st.markdown('---')
     st.markdown('## Volume-based')
     # VSTD
     st.markdown(f'VSTD: {wav.vstd:.2f}')

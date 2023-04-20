@@ -304,9 +304,18 @@ class WavFile:
         Compute the low short time energy of the audio signal.
         :return: array of low short time energies of each channel
         """
+
+        # specify the number of following elements to include in each mean
+        n = 1000 // self.frame_length_ms
+        kernel = np.ones(n) / n
+        arr_padded = np.concatenate((self.short_time_energy, np.zeros(n)))
+
+        # compute the means using the convolve function
+        arr_means = np.convolve(arr_padded, kernel, mode='valid')[::(len(self.short_time_energy) - n + 1)]
+        print(f'n: {n}, arr_means: {arr_means.shape}, short_time_energy: {self.short_time_energy.shape}')
         # Compute low energy frames
         low_energy_frames = np.sign(
-            0.5 * np.mean(self.short_time_energy) - self.short_time_energy
+            0.5 * np.mean(arr_means) - self.short_time_energy
         )
         lster = np.mean(low_energy_frames + 1) / 2
         return lster
@@ -402,11 +411,11 @@ class WavFile:
         classified_frames[self.short_time_energy >= threshold] = 1
         return classified_frames
     
-    @cached_property
-    def audio_type(self, threshold: float = 0.45):
+    @cache
+    def get_audio_type(self, threshold: float = 0.45):
         """
         Detect audio type in the audio signal.
         :param threshold: threshold for detecting sound
         :return: array of sound detection values
         """
-        return "music" if self.low_short_time_energy_ratio < threshold else "speech"
+        return "Music" if self.low_short_time_energy_ratio < threshold else "Speech"
