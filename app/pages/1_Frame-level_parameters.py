@@ -66,7 +66,7 @@ if store.get_wavfile() is not None:
             y=y_cls,
             mode='markers',
             marker=dict(color=color),
-            name= "Silence" if cls == 0 else "Non-voiced" if cls == 1 else "Voiced"
+            name= "Silence" if cls == 0 else "Unvoiced" if cls == 1 else "Voiced"
         )
         
         # add the trace to the list
