@@ -47,6 +47,7 @@ class WavFile:
                 self.__normalise_samples()
 
             # TODO - set appropriate frame size and overlap
+            self.frames = []
             self.frames = self.__split_into_frames()
 
     @property
@@ -60,6 +61,10 @@ class WavFile:
     @property
     def n_samples(self) -> int:
         return self.__end_id - self.__start_id
+
+    @property
+    def n_samples_in_frames(self) -> int:
+        return sum([len(f) for f in self.frames])
 
     @property
     def all_audio_length_sec(self) -> float:
@@ -95,17 +100,20 @@ class WavFile:
 
         self.samples_all = samples_normalised
 
+    @property
+    def frame_size(self) -> int:
+        """Number of samples in a single frame"""
+        return self.frame_length_ms * self.sample_rate // 1000
+
     def __split_into_frames(self) -> np.ndarray:
         """
         Split the samples array into frames of given size with given overlap.
         :return: array of frames
         """
-        # frame size in samples
-        frame_size = self.frame_length_ms * self.sample_rate // 1000
         frames = [
-            self.samples[i: i + frame_size]
+            self.samples[i: i + self.frame_size]
             for i in range(
-                0, self.n_samples - frame_size, frame_size - self.frame_overlap
+                0, self.n_samples - self.frame_size, self.frame_size - self.frame_overlap
             )
         ]
         return np.array(frames, dtype=np.int32)
@@ -116,7 +124,7 @@ class WavFile:
         """
         self.__start_id = start_sample_id
         self.__end_id = end_sample_id
-        self.__split_into_frames()
+        self.frames = self.__split_into_frames()
 
     @cached_property
     def n_frames(self) -> int:
@@ -176,9 +184,9 @@ class WavFile:
     @cache
     def get_frame_types(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the frame types based on zero crossing rate and volume.
-            1 - silent
-            2 - voiceless
-            3 - voiced
+            0 - silent
+            1 - voiceless
+            2 - voiced
 
         Args:
             zcr (numpy.ndarray): Array of zero crossing rate values for each frame.
