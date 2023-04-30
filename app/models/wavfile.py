@@ -345,6 +345,8 @@ class WavFile:
 
         # Compute probability density function of energy values
         pdf = energies / np.sum(energies)
+        # fix for "divide by zero encountered in log2"
+        pdf[pdf == 0] = 10 ** (-100)
 
         # Compute energy entropy
         entropy = -np.sum(pdf * np.log2(pdf))
