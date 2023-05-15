@@ -144,30 +144,6 @@ class Signal:
                      for frame in self.frames]
         return np.array(freq_vals)
 
-    def get_features(self) -> dict:
-        """
-        Get all features of the audio signal.
-        :return: dictionary of features
-        """
-        return {
-            "frame-level": {
-                "volume": list(self.volume),
-                "short_time_energy": list(self.short_time_energy),
-                "zero_crossing_rate": list(self.zero_crossing_rate),
-                "silence_rate": self.get_silence_rate(),
-                "fundamental_frequency": list(self.fundamental_frequency),
-            },
-            "clip-level": {
-                "vstd": self.vstd,
-                "volume_dynamic_range": self.volume_dynamic_range,
-                "volume_undulation": self.volume_undulation,
-                "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
-                "energy_entropy": self.energy_entropy(),
-                "zstd": self.zstd,
-                "hzcrr": self.hzcrr,
-            },
-        }
-
     # TODO: Ideally, entirety of this class code from this point onwards
     #  should be extracted to a separate file, similar to core/freq_analysis.py
     # ========== FRAME-LEVEL ========== #

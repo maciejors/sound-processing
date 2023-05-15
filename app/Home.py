@@ -1,11 +1,10 @@
 import numpy as np
 import streamlit as st
 import plotly.express as px
-import json
 
 from app import store
 from app.components.file_uploader import file_uploader
-
+from app.core.exporting import Bundler
 
 st.markdown('# Sound analysis')
 file_uploader()
@@ -34,10 +33,9 @@ if store.get_signal() is not None:
     st.markdown(f'- Number of samples per second: {signal.sample_rate}')
 
     # csv
-    st.markdown('## Generate JSON File')
+    st.markdown('## Export features to JSON')
     if st.button('Generate JSON'):
-        features = signal.get_features()
-        json_str = json.dumps(features)
+        json_str = Bundler(signal).export_json()
         st.download_button(
             label='Download JSON',
             data=json_str,
