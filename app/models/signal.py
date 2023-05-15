@@ -335,8 +335,6 @@ class Signal:
         # compute the means using the convolve function
         arr_means = np.convolve(arr_padded, kernel, mode='valid')[
                     ::(len(self.short_time_energy) - n + 1)]
-        print(
-            f'n: {n}, arr_means: {arr_means.shape}, short_time_energy: {self.short_time_energy.shape}')
         # Compute low energy frames
         low_energy_frames = np.sign(
             0.5 * np.mean(arr_means) - self.short_time_energy
