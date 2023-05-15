@@ -17,8 +17,8 @@ if store.get_signal() is not None:
     st.markdown('---')
     st.markdown('## Frequency domain of a clip')
     plot = px.line(
-        x=fa.fft_frequency_values_full,
-        y=fa.fft_magnitude_spectrum_full,
+        x=signal.fft_freq_vals_full,
+        y=signal.fft_magn_spectr_full,
         title=f'Frequency domain',
         labels={'x': 'Frequency [Hz]', 'y': 'Magnitude'},
     )

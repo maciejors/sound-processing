@@ -116,6 +116,34 @@ class Signal:
     def n_frames(self) -> int:
         return len(self.frames)
 
+    @property
+    def fft_magn_spectr_full(self) -> np.ndarray:
+        """Returns magnitude spectrum after applying FFT on the whole signal"""
+        fft_result = np.fft.fft(self.samples)
+        return np.abs(fft_result)
+
+    @property
+    def fft_magn_spectr_frames(self) -> np.ndarray:
+        """Returns magnitude spectrums after applying FFT, per frame"""
+        fft_result = np.fft.fft(self.frames, axis=1)
+        return np.abs(fft_result)
+
+    @property
+    def fft_freq_vals_full(self) -> np.ndarray:
+        """Returns the frequency values after applying FFT on the whole signal"""
+        freq_vals = np.fft.fftfreq(
+            len(self.samples),
+            1 / self.sample_rate
+        )
+        return freq_vals
+
+    @property
+    def fft_freq_vals_frames(self) -> np.ndarray:
+        """Returns frequency values after applying FFT, per frame"""
+        freq_vals = [np.fft.fftfreq(len(frame), 1 / self.sample_rate)
+                     for frame in self.frames]
+        return np.array(freq_vals)
+
     def get_features(self) -> dict:
         """
         Get all features of the audio signal.
@@ -140,6 +168,8 @@ class Signal:
             },
         }
 
+    # TODO: Ideally, entirety of this class code from this point onwards
+    #  should be extracted to a separate file, similar to core/freq_analysis.py
     # ========== FRAME-LEVEL ========== #
 
     @cached_property
