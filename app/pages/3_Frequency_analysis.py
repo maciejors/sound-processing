@@ -5,16 +5,17 @@ import plotly.express as px
 from app import store
 from app.core.freq_analysis import FrequencyAnalyser
 
-st.markdown('# Frequency analysis (frame-level)')
+st.markdown('# Frequency analysis')
 
-if store.get_wavfile() is not None:
-    wav = store.get_wavfile()
-    timestamps_frames = np.linspace(0, wav.audio_length_sec, num=wav.n_frames)
+if store.get_signal() is not None:
+    signal = store.get_signal()
+    timestamps_frames = np.linspace(0, signal.audio_length_sec, num=signal.n_frames)
 
-    fa = FrequencyAnalyser(wav)
+    fa = FrequencyAnalyser(signal)
 
     # Frequency domain
     st.markdown('---')
+    st.markdown('## Frequency domain of a clip')
     plot = px.line(
         x=fa.fft_frequency_values_full,
         y=fa.fft_magnitude_spectrum_full,
@@ -23,8 +24,11 @@ if store.get_wavfile() is not None:
     )
     st.plotly_chart(plot, use_container_width=True)
 
-    # Volume
+    # other stuff
     st.markdown('---')
+    st.markdown('## Frequency-based parameters (frame-level)')
+
+    # Volume
     plot = px.line(
         x=timestamps_frames,
         y=fa.volume(),

@@ -4,7 +4,7 @@ from functools import cache, cached_property
 import numpy as np
 
 
-class WavFile:
+class Signal:
     def __init__(self, file, normalise: bool = True,
                  frame_length_ms: int = 20, frame_overlap: int = 0):
         """

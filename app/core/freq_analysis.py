@@ -1,6 +1,6 @@
 import numpy as np
 
-from app.models.wavfile import WavFile, split_samples_into_frames
+from app.models.signal import Signal
 
 
 class FrequencyAnalyser:
@@ -9,37 +9,37 @@ class FrequencyAnalyser:
     parameters of a signal. It utilises Fast Fourier Transformation.
     """
 
-    __slots__ = ['_wavfile']
+    __slots__ = ['_signal']
 
-    def __init__(self, wavfile: WavFile):
-        self._wavfile = wavfile
+    def __init__(self, signal: Signal):
+        self._signal = signal
 
     @property
     def fft_magnitude_spectrum_full(self) -> np.ndarray:
         """Returns magnitude spectrum after applying FFT on the whole signal"""
-        fft_result = np.fft.fft(self._wavfile.samples)
+        fft_result = np.fft.fft(self._signal.samples)
         return np.abs(fft_result)
 
     @property
     def fft_magnitude_spectrum_per_frame(self) -> np.ndarray:
         """Returns magnitude spectrums after applying FFT, per frame"""
-        fft_result = np.fft.fft(self._wavfile.frames, axis=1)
+        fft_result = np.fft.fft(self._signal.frames, axis=1)
         return np.abs(fft_result)
 
     @property
     def fft_frequency_values_full(self) -> np.ndarray:
         """Returns the frequency values after applying FFT on the whole signal"""
         freq_vals = np.fft.fftfreq(
-            len(self._wavfile.samples),
-            1 / self._wavfile.sample_rate
+            len(self._signal.samples),
+            1 / self._signal.sample_rate
         )
         return freq_vals
 
     @property
     def fft_frequency_values_per_frame(self) -> np.ndarray:
         """Returns frequency values after applying FFT, per frame"""
-        freq_vals = [np.fft.fftfreq(len(frame), 1 / self._wavfile.sample_rate)
-                     for frame in self._wavfile.frames]
+        freq_vals = [np.fft.fftfreq(len(frame), 1 / self._signal.sample_rate)
+                     for frame in self._signal.frames]
         return np.array(freq_vals)
 
     def volume(self) -> np.ndarray:
