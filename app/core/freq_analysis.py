@@ -6,7 +6,7 @@ from app.models.signal import Signal
 class FrequencyAnalyser:
     """
     Class that provides methods to calculate various frequency-based
-    parameters of a signal. It utilises Fast Fourier Transformation.
+    parameters of a signal.
     """
 
     __slots__ = ['_signal']
