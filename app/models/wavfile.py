@@ -2,7 +2,6 @@ import wave
 from functools import cache, cached_property
 
 import numpy as np
-import pandas as pd
 
 
 class WavFile:
@@ -39,16 +38,15 @@ class WavFile:
             # convert to mono by averaging samples from each channel
             self.samples_all = np.mean(self.samples_all, axis=0)
 
+            if normalise:
+                self.__normalise_samples()
+
             # set the default boundaries of audio to analyse
             self.__start_id = 0
             self.__end_id = len(self.samples_all) - 1
 
-            if normalise:
-                self.__normalise_samples()
-
-            # TODO - set appropriate frame size and overlap
-            self.frames = []
-            self.frames = self.__split_into_frames()
+            self.frames = split_samples_into_frames(
+                self.samples, self.frame_size, self.frame_overlap)
 
     @property
     def boundaries(self) -> tuple[int, int]:
@@ -105,26 +103,14 @@ class WavFile:
         """Number of samples in a single frame"""
         return self.frame_length_ms * self.sample_rate // 1000
 
-    def __split_into_frames(self) -> np.ndarray:
-        """
-        Split the samples array into frames of given size with given overlap.
-        :return: array of frames
-        """
-        frames = [
-            self.samples[i: i + self.frame_size]
-            for i in range(
-                0, self.n_samples - self.frame_size, self.frame_size - self.frame_overlap
-            )
-        ]
-        return np.array(frames, dtype=np.int32)
-
     def set_boundaries(self, start_sample_id: int, end_sample_id: int):
         """
         Sets the starting and the ending point of audio to analyse.
         """
         self.__start_id = start_sample_id
         self.__end_id = end_sample_id
-        self.frames = self.__split_into_frames()
+        self.frames = split_samples_into_frames(
+            self.samples, self.frame_size, self.frame_overlap)
 
     @cached_property
     def n_frames(self) -> int:
@@ -153,6 +139,8 @@ class WavFile:
                 "hzcrr": self.hzcrr,
             },
         }
+
+    # ========== FRAME-LEVEL ========== #
 
     @cached_property
     def volume(self) -> np.ndarray:
@@ -196,7 +184,7 @@ class WavFile:
             self.zero_crossing_rate <= zcr_threshold, self.volume <= volume_threshold
         ).astype(int)
         return silent_frames
-    
+
     @cache
     def get_frame_types(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the frame types based on zero crossing rate and volume.
@@ -215,7 +203,8 @@ class WavFile:
         """
         # Compute frame types based on zero crossing rate and volume thresholds
         frame_types = np.where(
-            self.zero_crossing_rate <= zcr_threshold, np.where(self.volume <= volume_threshold, 0, 2), 1
+            self.zero_crossing_rate <= zcr_threshold,
+            np.where(self.volume <= volume_threshold, 0, 2), 1
         )
         # TODO - possible situation when frame has high zcr and low volume
         return frame_types
@@ -250,7 +239,7 @@ class WavFile:
         for frame in self.frames:
             # Compute autocorrelation of the frame
             autocorr = np.correlate(frame, frame, mode='full')
-            autocorr = autocorr[len(frame)-1:]
+            autocorr = autocorr[len(frame) - 1:]
             zero_crossings = np.where(np.diff(np.sign(autocorr)))[0]
             if not len(zero_crossings):
                 freqs.append(0)
@@ -263,10 +252,12 @@ class WavFile:
             # Convert lag to time and frequency
             lag = peak / self.sample_rate
             freq = 1 / lag
-            
+
             freqs.append(freq)
 
         return np.array(freqs)
+
+    # ========== CLIP-LEVEL ========== #
 
     @cached_property
     def vstd(self) -> float:
@@ -292,26 +283,28 @@ class WavFile:
         # """
         # # Compute RMS amplitude of audio signal
         # rms_amplitude = np.sqrt(np.mean(np.square(self.frames), axis=1))
-        
+
         # # Compute time array in seconds
         # time = np.arange(0, len(audio_signal)) / sample_rate
-        
+
         # # Compute RMS amplitude over time
         # rms_amplitude_over_time = np.sqrt(np.mean(np.square(audio_signal), axis=1))
-        
+
         # # Compute differences between adjacent RMS amplitude values
         # differences = np.diff(rms_amplitude_over_time)
-        
+
         # # Compute mean of absolute differences
         # volume_undulation = np.mean(np.abs(differences))
-    
+
         # return volume_undulation
         # Initialize the VU value to zero.
         VU = 0.0
 
         # Compute the differences between neighboring peaks and valleys.
-        peaks = np.logical_and(self.volume[1:-1] > self.volume[:-2], self.volume[1:-1] > self.volume[2:])
-        valleys = np.logical_and(self.volume[1:-1] < self.volume[:-2], self.volume[1:-1] < self.volume[2:])
+        peaks = np.logical_and(self.volume[1:-1] > self.volume[:-2],
+                               self.volume[1:-1] > self.volume[2:])
+        valleys = np.logical_and(self.volume[1:-1] < self.volume[:-2],
+                                 self.volume[1:-1] < self.volume[2:])
         peak_diffs = self.volume[1:-1] - np.minimum(self.volume[:-2], self.volume[2:])
         valley_diffs = np.maximum(self.volume[:-2], self.volume[2:]) - self.volume[1:-1]
 
@@ -320,7 +313,7 @@ class WavFile:
 
         # Return the final VU value.
         return VU
-    
+
     @cached_property
     def low_short_time_energy_ratio(self) -> float:
         """
@@ -334,8 +327,10 @@ class WavFile:
         arr_padded = np.concatenate((self.short_time_energy, np.zeros(n)))
 
         # compute the means using the convolve function
-        arr_means = np.convolve(arr_padded, kernel, mode='valid')[::(len(self.short_time_energy) - n + 1)]
-        print(f'n: {n}, arr_means: {arr_means.shape}, short_time_energy: {self.short_time_energy.shape}')
+        arr_means = np.convolve(arr_padded, kernel, mode='valid')[
+                    ::(len(self.short_time_energy) - n + 1)]
+        print(
+            f'n: {n}, arr_means: {arr_means.shape}, short_time_energy: {self.short_time_energy.shape}')
         # Compute low energy frames
         low_energy_frames = np.sign(
             0.5 * np.mean(arr_means) - self.short_time_energy
@@ -401,7 +396,7 @@ class WavFile:
         classified_frames = np.zeros_like(self.short_time_energy)
         classified_frames[self.short_time_energy >= threshold] = 1
         return classified_frames
-    
+
     @cache
     def get_audio_type(self, threshold: float = 0.45):
         """
@@ -410,3 +405,18 @@ class WavFile:
         :return: array of sound detection values
         """
         return "Music" if self.low_short_time_energy_ratio < threshold else "Speech"
+
+
+def split_samples_into_frames(samples: np.ndarray,
+                              frame_size: int,
+                              frame_overlap: int = 0) -> np.ndarray:
+    """
+    Split the samples array into frames of given size with given overlap.
+    """
+    frames = [
+        samples[i: i + frame_size]
+        for i in range(
+            0, len(samples) - frame_size, frame_size - frame_overlap
+        )
+    ]
+    return np.array(frames, dtype=np.int32)
