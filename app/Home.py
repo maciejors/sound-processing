@@ -17,8 +17,12 @@ if store.get_signal() is not None:
     start_id, end_id = st.slider(
         'Set the range of audio to analyse',
         value=signal.boundaries,
-        min_value=0, max_value=signal.n_samples_all
+        min_value=0, max_value=signal.n_samples_all,
+        format="",
     )
+    start_time_s = start_id / signal.sample_rate
+    end_time_s = end_id / signal.sample_rate
+    st.markdown(f'Selected interval: {start_time_s:.2f}s - {end_time_s:.2f}s')
     if st.button('Apply boundaries'):
         signal.set_boundaries(start_id, end_id)
 
@@ -49,7 +53,7 @@ if store.get_signal() is not None:
     plot = px.line(
         x=timestamps_samples,
         y=signal.samples_all,
-        title=f'Signal plot',
+        title=f'Full signal plot',
         labels={'x': 'Time (in seconds)', 'y': 'Amplitude'},
     )
     plot.add_shape(
