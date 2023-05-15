@@ -129,7 +129,7 @@ class Signal:
         return np.abs(fft_result)
 
     @property
-    def fft_freq_vals_full(self) -> np.ndarray:
+    def fft_freqs_full(self) -> np.ndarray:
         """Returns the frequency values after applying FFT on the whole signal"""
         freq_vals = np.fft.fftfreq(
             len(self.samples),
@@ -138,7 +138,7 @@ class Signal:
         return freq_vals
 
     @property
-    def fft_freq_vals_frames(self) -> np.ndarray:
+    def fft_freqs_frames(self) -> np.ndarray:
         """Returns frequency values after applying FFT, per frame"""
         freq_vals = [np.fft.fftfreq(len(frame), 1 / self.sample_rate)
                      for frame in self.frames]

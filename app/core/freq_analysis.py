@@ -21,7 +21,7 @@ class FrequencyAnalyser:
     def frequency_cetroids(self) -> np.ndarray:
         """Returns frequency centroids for every frame"""
         numerator = np.sum(
-            self._signal.fft_freq_vals_frames * self._signal.fft_magn_spectr_frames,
+            self._signal.fft_freqs_frames * self._signal.fft_magn_spectr_frames,
             axis=1
         )
         denom = np.sum(self._signal.fft_magn_spectr_frames, axis=1)
@@ -42,7 +42,7 @@ class FrequencyAnalyser:
         # idx of frequencies in the specified bound
         freqs_idx_masks = [np.where((freqs_frame >= freq_lower_bound) &
                                     (freqs_frame <= freq_upper_bound))
-                           for freqs_frame in self._signal.fft_freq_vals_frames]
+                           for freqs_frame in self._signal.fft_freqs_frames]
         # magnitudes for frequencies in the bound
         relevant_magnitudes_sq = [frame[mask] ** 2 for frame, mask in
                                   zip(self._signal.fft_magn_spectr_frames, freqs_idx_masks)]
