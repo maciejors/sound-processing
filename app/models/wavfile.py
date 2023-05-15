@@ -130,6 +130,30 @@ class WavFile:
     def n_frames(self) -> int:
         return len(self.frames)
 
+    def get_features(self) -> dict:
+        """
+        Get all features of the audio signal.
+        :return: dictionary of features
+        """
+        return {
+            "frame-level": {
+                "volume": list(self.volume),
+                "short_time_energy": list(self.short_time_energy),
+                "zero_crossing_rate": list(self.zero_crossing_rate),
+                "silence_rate": self.get_silence_rate(),
+                "fundamental_frequency": list(self.fundamental_frequency),
+            },
+            "clip-level": {
+                "vstd": self.vstd,
+                "volume_dynamic_range": self.volume_dynamic_range,
+                "volume_undulation": self.volume_undulation,
+                "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
+                "energy_entropy": self.energy_entropy(),
+                "zstd": self.zstd,
+                "hzcrr": self.hzcrr,
+            },
+        }
+
     @cached_property
     def volume(self) -> np.ndarray:
         """
@@ -137,14 +161,6 @@ class WavFile:
         :return: array of volumes of each channel
         """
         return np.sqrt(np.mean(self.frames ** 2, axis=1))
-
-    @cached_property
-    def stereo_balance(self) -> np.ndarray:
-        """
-        Compute the stereo balance of the audio signal.
-        :return: array of stereo balances of each channel
-        """
-        return self.frames[0] / self.frames[1]
 
     @cached_property
     def short_time_energy(self) -> np.ndarray:
@@ -304,7 +320,6 @@ class WavFile:
 
         # Return the final VU value.
         return VU
-
     
     @cached_property
     def low_short_time_energy_ratio(self) -> float:
@@ -375,40 +390,6 @@ class WavFile:
                 )
                 / 2
         )
-
-    def get_features(self) -> dict:
-        """
-        Get all features of the audio signal.
-        :return: dictionary of features
-        """
-        return {
-            "frame-level": {
-                "volume": list(self.volume),
-                # "stereo_balance": list(self.stereo_balance),
-                "short_time_energy": list(self.short_time_energy),
-                "zero_crossing_rate": list(self.zero_crossing_rate),
-                "silence_rate": self.get_silence_rate(),
-                "fundamental_frequency": list(self.fundamental_frequency),
-            },
-            "clip-level": {
-                "vstd": self.vstd,
-                "volume_dynamic_range": self.volume_dynamic_range,
-                "volume_undulation": self.volume_undulation,
-                "low_short_time_energy_ratio": self.low_short_time_energy_ratio,
-                "energy_entropy": self.energy_entropy(),
-                "zstd": self.zstd,
-                "hzcrr": self.hzcrr,
-            },
-        }
-
-    def export_features(self, path: str = None):
-        """
-        Export all features of the audio signal to a CSV file.
-        :param path: path to the CSV file
-        """
-        features = self.get_features()
-        df = pd.DataFrame(features)
-        return df.to_csv(index=False)
 
     @cached_property
     def sound_presence(self, threshold: float = 0.1):
