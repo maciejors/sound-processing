@@ -67,10 +67,19 @@ class FrequencyAnalyser:
 
     def spectral_flatness(self) -> np.ndarray:
         """Calculates spectral flatness for each frame"""
-        geometric_mean = np.exp(np.mean(np.log(
-            self._signal.fft_magn_spectr_frames ** 2), axis=1))
+        # np.log(0) warning is handled with later
+        with np.errstate(divide='ignore'):
+            geometric_mean = np.exp(np.mean(np.log(
+                self._signal.fft_magn_spectr_frames ** 2), axis=1))
         arithmetic_mean = np.mean(self._signal.fft_magn_spectr_frames ** 2, axis=1)
-        return geometric_mean / arithmetic_mean
+        sf = geometric_mean / arithmetic_mean
+        # The MPEG7 standard also defines that this expression should
+        # return a value of 1 whenever there is no audio signal present
+        # (i.e. the mean power is zero)
+        # (this is related to the warning from before)
+        sf[geometric_mean == 0] = 1
+        sf[arithmetic_mean == 0] = 1
+        return sf
 
     def spectral_crest_factor(self) -> np.ndarray:
         """Calculates spectral crest factor for each frame"""
