@@ -66,7 +66,8 @@ if store.get_signal() is not None:
     # Spectrogram
     st.markdown('---')
     st.markdown('## Spectrogram')
-    plot = px.imshow(windowing.spectrogram())
+    plot = px.imshow(
+        windowing.spectrogram(),
+        color_continuous_scale='RdBu_r',
+    )
     st.plotly_chart(plot, use_container_width=True)
-
-

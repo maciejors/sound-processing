@@ -3,7 +3,7 @@ from typing import Callable
 import numpy as np
 import scipy.signal.windows as wn
 
-from app.models.signal import Signal
+from app.models.signal import Signal, split_samples_into_frames
 
 
 class Windowing:
@@ -59,11 +59,12 @@ class Windowing:
         return np.abs(fft_result)
 
     def spectrogram(self) -> np.ndarray:
-        spectrogram = np.zeros((self._signal.frame_size // 2 + 1, self._signal.n_frames))
-        # STFT
-        for i, frame in enumerate(self._signal.frames):
-            spectrum = np.fft.fft(frame * self.windowing_func(len(frame)))
-            magnitude_spectrum = np.abs(spectrum[:self._signal.frame_size // 2 + 1])
-            spectrogram[:, i] = magnitude_spectrum
-
+        # spectrogram = np.zeros((self._signal.frame_size // 2 + 1, self._signal.n_frames))
+        # for i, frame in enumerate(self._signal.frames):
+        #     spectrogram[:, i] = self.windowed_fft_magn_spectr()
+        spectrogram = split_samples_into_frames(
+            samples=self.windowed_fft_magn_spectr(),
+            frame_size=self._signal.frame_size,
+            frame_overlap=self._signal.frame_overlap_size,
+        ).T
         return 20 * np.log10(spectrogram)
