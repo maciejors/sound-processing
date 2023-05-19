@@ -65,3 +65,11 @@ if store.get_signal() is not None:
             labels={'x': 'Time (in seconds)', 'y': 'Magnitude'},
         )
         st.plotly_chart(plot, use_container_width=True)
+
+    # Spectrogram
+    st.markdown('---')
+    st.markdown('## Spectrogram')
+    plot = px.imshow(windowing.spectrogram())
+    st.plotly_chart(plot, use_container_width=True)
+
+

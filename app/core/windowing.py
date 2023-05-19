@@ -57,3 +57,13 @@ class Windowing:
         """Returns fft magnitude spectrum for a signal with windowing applied"""
         fft_result = np.fft.fft(self.windowed_samples())
         return np.abs(fft_result)
+
+    def spectrogram(self) -> np.ndarray:
+        spectrogram = np.zeros((self._signal.frame_size // 2 + 1, self._signal.n_frames))
+        # STFT
+        for i, frame in enumerate(self._signal.frames):
+            spectrum = np.fft.fft(frame * self.windowing_func(len(frame)))
+            magnitude_spectrum = np.abs(spectrum[:self._signal.frame_size // 2 + 1])
+            spectrogram[:, i] = magnitude_spectrum
+
+        return 20 * np.log10(spectrogram)

@@ -5,17 +5,11 @@ import numpy as np
 
 
 class Signal:
-    def __init__(self, file, normalise: bool = True,
-                 frame_length_ms: int = 20, frame_overlap: int = 0):
+    def __init__(self, file, normalise: bool = True):
         """
         :param file: a wavfile (path or bytes)
         :param normalise: whether or not to normalise the audio
-        :param frame_length_ms: length of the frame in ms
-        :param frame_overlap: overlap between frames in samples
         """
-        self.frame_length_ms = frame_length_ms
-        self.frame_overlap = frame_overlap
-
         with wave.open(file, mode="rb") as wavfile_raw:
             # basic audio properties:
             self.n_channels = wavfile_raw.getnchannels()
@@ -44,9 +38,12 @@ class Signal:
             # set the default boundaries of audio to analyse
             self.__start_id = 0
             self.__end_id = len(self.samples_all) - 1
+            # set the default frame length and overlap
+            self.frame_length_ms = 20
+            self.frame_overlap_ms = 0
 
             self.frames = split_samples_into_frames(
-                self.samples, self.frame_size, self.frame_overlap)
+                self.samples, frame_size=self.frame_size, frame_overlap=self.frame_overlap_size)
 
     @property
     def boundaries(self) -> tuple[int, int]:
@@ -103,16 +100,25 @@ class Signal:
         """Number of samples in a single frame"""
         return self.frame_length_ms * self.sample_rate // 1000
 
-    def set_boundaries(self, start_sample_id: int, end_sample_id: int):
+    @property
+    def frame_overlap_size(self) -> int:
+        """Number of overlapping samples between the frames"""
+        return self.frame_overlap_ms * self.sample_rate // 1000
+
+    def update_settings(self, start_sample_id: int, end_sample_id: int,
+                        frame_length_ms: int, frame_overlap_ms: int):
         """
-        Sets the starting and the ending point of audio to analyse.
+        Sets the starting and the ending point of audio to analyse,
+        as well as frame size and frame overlap in ms.
         """
         self.__start_id = start_sample_id
         self.__end_id = end_sample_id
+        self.frame_length_ms = frame_length_ms
+        self.frame_overlap_ms = frame_overlap_ms
         self.frames = split_samples_into_frames(
-            self.samples, self.frame_size, self.frame_overlap)
+            self.samples, self.frame_size, self.frame_overlap_size)
 
-    @cached_property
+    @property
     def n_frames(self) -> int:
         return len(self.frames)
 
@@ -148,7 +154,7 @@ class Signal:
     #  should be extracted to a separate file, similar to core/freq_analysis.py
     # ========== FRAME-LEVEL ========== #
 
-    @cached_property
+    @property
     def volume(self) -> np.ndarray:
         """
         Compute the volume of the audio signal.
@@ -156,7 +162,7 @@ class Signal:
         """
         return np.sqrt(np.mean(self.frames ** 2, axis=1))
 
-    @cached_property
+    @property
     def short_time_energy(self) -> np.ndarray:
         """
         Compute the short time energy of the audio signal.
@@ -164,7 +170,7 @@ class Signal:
         """
         return np.mean(self.frames ** 2, axis=1)
 
-    @cached_property
+    @property
     def zero_crossing_rate(self) -> np.ndarray:
         """
         Compute the zero crossing rate of the audio signal.
@@ -172,7 +178,6 @@ class Signal:
         """
         return np.mean(np.abs(np.diff(np.sign(self.frames))), axis=1) / 2
 
-    @cache
     def get_silent_frames(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the silent frames based on zero crossing rate and volume.
 
@@ -191,7 +196,6 @@ class Signal:
         ).astype(int)
         return silent_frames
 
-    @cache
     def get_frame_types(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the frame types based on zero crossing rate and volume.
             0 - silent
@@ -215,7 +219,6 @@ class Signal:
         # TODO - possible situation when frame has high zcr and low volume
         return frame_types
 
-    @cache
     def get_silence_rate(self, zcr_threshold=0.1, volume_threshold=0.1) -> np.ndarray:
         """Calculates the silent rate of frames based on zero crossing rate and volume.
 
@@ -235,7 +238,7 @@ class Signal:
 
         return silence_rate
 
-    @cached_property
+    @property
     def fundamental_frequency(self) -> np.ndarray:
         """
         Compute the fundamental frequency of the audio signal.
@@ -265,7 +268,7 @@ class Signal:
 
     # ========== CLIP-LEVEL ========== #
 
-    @cached_property
+    @property
     def vstd(self) -> float:
         """
         Compute the variance of the standard deviation of the audio signal.
@@ -273,7 +276,7 @@ class Signal:
         """
         return np.std(self.samples) / np.max(self.samples)
 
-    @cached_property
+    @property
     def volume_dynamic_range(self) -> float:
         """
         Compute the volume dynamic range of the audio signal.
@@ -281,7 +284,7 @@ class Signal:
         """
         return 1 - np.min(self.samples) / np.max(self.samples)
 
-    @cached_property
+    @property
     def volume_undulation(self) -> float:
         # """
         # Compute the volume undulation of the audio signal.
@@ -320,7 +323,7 @@ class Signal:
         # Return the final VU value.
         return VU
 
-    @cached_property
+    @property
     def low_short_time_energy_ratio(self) -> float:
         """
         Compute the low short time energy of the audio signal.
@@ -342,7 +345,6 @@ class Signal:
         lster = np.mean(low_energy_frames + 1) / 2
         return lster
 
-    @cache
     def energy_entropy(self, k: int = 10) -> float:
         """
         Compute the energy entropy of the audio signal.
@@ -367,7 +369,7 @@ class Signal:
 
         return entropy
 
-    @cached_property
+    @property
     def zstd(self) -> float:
         """
         Compute the standard deviation of the zero crossing rate of the audio signal.
@@ -375,7 +377,7 @@ class Signal:
         """
         return self.zero_crossing_rate.std()
 
-    @cached_property
+    @property
     def hzcrr(self) -> float:
         """
         Compute the high zero crossing rate ratio of the audio signal.
@@ -390,7 +392,7 @@ class Signal:
                 / 2
         )
 
-    @cached_property
+    @property
     def sound_presence(self, threshold: float = 0.1):
         """
         Detect sound in the audio signal.
@@ -401,7 +403,6 @@ class Signal:
         classified_frames[self.short_time_energy >= threshold] = 1
         return classified_frames
 
-    @cache
     def get_audio_type(self, threshold: float = 0.45):
         """
         Detect audio type in the audio signal.

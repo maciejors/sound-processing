@@ -23,8 +23,26 @@ if store.get_signal() is not None:
     start_time_s = start_id / signal.sample_rate
     end_time_s = end_id / signal.sample_rate
     st.markdown(f'Selected interval: {start_time_s:.2f}s - {end_time_s:.2f}s')
-    if st.button('Apply boundaries'):
-        signal.set_boundaries(start_id, end_id)
+
+    # frame size & overlap
+    frame_length_ms = st.slider(
+        'Set the frame length',
+        value=signal.frame_length_ms,
+        min_value=10, max_value=40,
+        format="%dms",
+    )
+    frame_overlap_ms = st.slider(
+        'Set the frame overlap',
+        value=signal.frame_overlap_ms,
+        min_value=0, max_value=frame_length_ms // 2,
+        format="%dms",
+    )
+    # apply changes button
+    if st.button('Apply changes'):
+        signal.update_settings(
+            start_sample_id=start_id, end_sample_id=end_id,
+            frame_length_ms=frame_length_ms, frame_overlap_ms=frame_overlap_ms
+        )
 
     # audio player
     st.audio(signal.samples, sample_rate=signal.sample_rate)
