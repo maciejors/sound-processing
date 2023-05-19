@@ -43,7 +43,6 @@ if store.get_signal() is not None:
     # Frequency plot
     st.markdown('---')
     st.markdown('## Frequency domain plots')
-    timestamps_samples = np.linspace(0, signal.audio_length_sec, num=signal.n_samples)
 
     original_signal_col, windowed_signal_col = st.columns([1, 1])
     with original_signal_col:
@@ -66,8 +65,13 @@ if store.get_signal() is not None:
     # Spectrogram
     st.markdown('---')
     st.markdown('## Spectrogram')
+    timestamps_frames = np.linspace(0, signal.audio_length_sec, num=signal.n_frames)
+
     plot = px.imshow(
-        windowing.spectrogram(),
+        x=timestamps_frames,
+        img=windowing.spectrogram(),
         color_continuous_scale='RdBu_r',
+        aspect='auto',
+        labels={'x': 'Time [s]', 'y': 'Frequency'},
     )
     st.plotly_chart(plot, use_container_width=True)

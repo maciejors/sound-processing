@@ -59,12 +59,9 @@ class Windowing:
         return np.abs(fft_result)
 
     def spectrogram(self) -> np.ndarray:
-        # spectrogram = np.zeros((self._signal.frame_size // 2 + 1, self._signal.n_frames))
-        # for i, frame in enumerate(self._signal.frames):
-        #     spectrogram[:, i] = self.windowed_fft_magn_spectr()
-        spectrogram = split_samples_into_frames(
-            samples=self.windowed_fft_magn_spectr(),
-            frame_size=self._signal.frame_size,
-            frame_overlap=self._signal.frame_overlap_size,
-        ).T
+        spectrogram = np.zeros((self._signal.frame_size, self._signal.n_frames))
+        for i, frame in enumerate(self._signal.frames):
+            spectrogram[:, i] = np.abs(np.fft.fft(
+                frame * self.windowing_func(self._signal.frame_size)
+            ))
         return 20 * np.log10(spectrogram)
