@@ -13,7 +13,7 @@ if store.get_signal() is not None:
     signal = store.get_signal()
 
     # audio boundaries
-    st.markdown('## Audio boundaries')
+    st.markdown('## Audio settings')
     start_id, end_id = st.slider(
         'Set the range of audio to analyse',
         value=signal.boundaries,

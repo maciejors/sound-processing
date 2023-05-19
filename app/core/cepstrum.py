@@ -21,8 +21,9 @@ class Cepstrum:
         def get_pitch_of_frame(frame: np.ndarray) -> float:
             cepstrum = self.cepstrum(frame)
             cepstrum[0] = 0
+            # first max
             argmax = np.argmax(np.abs(cepstrum))
-            return 1 / argmax
+            return self._signal.sample_rate / (2 * argmax)
 
         pitches = [get_pitch_of_frame(f) for f in self._signal.frames]
         return np.array(pitches)
