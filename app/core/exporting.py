@@ -1,6 +1,7 @@
 import json
 
 from app.core.freq_analysis import FrequencyAnalyser
+from app.core.cepstrum import Cepstrum
 from app.models.signal import Signal
 
 
@@ -8,13 +9,16 @@ class Bundler:
     """Bundles selected functionalities and provides methods to export sound
     properties to a JSON format"""
 
-    __slots__ = ['signal', '_incl_frame_level', '_incl_clip_level', '_freq']
+    __slots__ = ['signal', '_incl_frame_level', '_incl_clip_level', '_freq', '_cepstrum']
 
-    def __init__(self, signal: Signal, frame_level=True, clip_level=True, freq=True):
+    def __init__(self, signal: Signal,
+                 frame_level=True, clip_level=True,
+                 freq=True, cepstrum=True):
         self.signal = signal
         self._incl_frame_level = frame_level
         self._incl_clip_level = clip_level
         self._freq = FrequencyAnalyser(signal) if freq else None
+        self._cepstrum = Cepstrum(signal) if cepstrum else None
 
     def export_json(self) -> str:
         """Dumps all sound features from bundled functionalities into one JSON string"""
@@ -47,6 +51,10 @@ class Bundler:
                 'ersb3': list(self._freq.ersb3()),
                 'spectral_flatness': list(self._freq.spectral_flatness()),
                 'spectral_crest_factor': list(self._freq.spectral_crest_factor()),
+            }
+        if self._cepstrum is not None:
+            dict_features['cepstrum'] = {
+                'f0': list(self._cepstrum.f0())
             }
         return json.dumps(dict_features)
 

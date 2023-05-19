@@ -1,12 +1,9 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import plotly.express as px
 
 from app import store
 from app.core.windowing import Windowing
-
-pd.options.plotting.backend = "plotly"  # for multiline plots
 
 st.markdown('# Windowing')
 

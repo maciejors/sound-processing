@@ -86,11 +86,11 @@ if store.get_signal() is not None:
     st.plotly_chart(fig, use_container_width=True)
 
     # F0
-    st.markdown('---')
-    plot = px.line(
-        x=timestamps_frames,
-        y=signal.fundamental_frequency,
-        title=f'Fundamental frequency',
-        labels={'x': 'Time (in seconds)', 'y': 'F0'},
-    )
-    st.plotly_chart(plot, use_container_width=True)
+    # st.markdown('---')
+    # plot = px.line(
+    #     x=timestamps_frames,
+    #     y=signal.fundamental_frequency,
+    #     title=f'Fundamental frequency',
+    #     labels={'x': 'Time (in seconds)', 'y': 'F0'},
+    # )
+    # st.plotly_chart(plot, use_container_width=True)
