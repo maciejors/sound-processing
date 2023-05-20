@@ -16,15 +16,15 @@ class Cepstrum:
     @staticmethod
     def cepstrum(samples: np.ndarray) -> np.ndarray:
         return np.fft.ifft(np.log(np.abs(np.fft.fft(samples))))
-    
+
     def f0(self) -> np.ndarray:
         sig_to_frames = self._signal.frames
-        frame_len,frame_num = self._signal.frame_size,self._signal.n_frames
+        frame_len, frame_num = self._signal.frame_size, self._signal.n_frames
         peaks = []
         for i in range(frame_num):
-            frame = sig_to_frames[:,i]
-            freq = np.fft.fftfreq(frame_len,1/self._signal.sample_rate)
-            m = self._signal.fft_magn_spectr_frames[:,i]
+            frame = sig_to_frames[:, i]
+            freq = np.fft.fftfreq(frame_len, 1/self._signal.sample_rate)
+            m = self._signal.fft_magn_spectr_frames[:, i]
             for j in range(m.shape[0]):
                 if freq[j] < 50 or freq[j] > 400:
                     m[j] = 0
