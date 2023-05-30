@@ -9,4 +9,4 @@ def file_uploader():
         type=['wav'],
     )
     if wavfile_raw is not None:
-        store.update_wavfile(wavfile_raw)
+        store.update_signal(wavfile_raw)

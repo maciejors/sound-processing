@@ -1,13 +1,13 @@
 from typing import Optional
-from app.models.wavfile import WavFile
+from app.models.signal import Signal
 
-__wavfile: Optional[WavFile] = None
-
-
-def get_wavfile() -> Optional[WavFile]:
-    return __wavfile
+__signal: Optional[Signal] = None
 
 
-def update_wavfile(raw_file):
-    global __wavfile
-    __wavfile = WavFile(raw_file)
+def get_signal() -> Optional[Signal]:
+    return __signal
+
+
+def update_signal(raw_file):
+    global __signal
+    __signal = Signal(raw_file)
