@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 
 AiPD_projekt1.py
+MNIST/
+Recordings/
